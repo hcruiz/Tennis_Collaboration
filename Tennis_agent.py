@@ -8,6 +8,7 @@ import numpy as np
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print("using device: ",device)
+GRADIENT_CLIP = 10
 
 class SelfPlay_Agent(nn.Module):
     
@@ -43,9 +44,10 @@ class SelfPlay_Agent(nn.Module):
         # Define loss functions
         self.critic_loss = nn.MSELoss()
 
-    def optim_step(self,loss,optim):
+    def optim_step(self,loss,optim,network):
         optim.zero_grad()
         loss.backward()
+        nn.utils.clip_grad_norm_(network.parameters(), GRADIENT_CLIP)
         optim.step()
         
     ############### Critic updater ########################
@@ -59,7 +61,7 @@ class SelfPlay_Agent(nn.Module):
         dones = torch.cat(dones,dim=0)
         y = rewards + gamma_Qnext.view(-1)*(1-dones[:,agent_i])
         loss = self.critic_loss(q_vals,y)
-        self.optim_step(loss, self.critic_optim)
+        self.optim_step(loss, self.critic_optim, self.critic)
         return loss.data.cpu().numpy()
     
     def get_qinputs(self,batch):
@@ -86,7 +88,7 @@ class SelfPlay_Agent(nn.Module):
         actions_batch = actions_batch.view(len(minibatch),-1)
         q_inputs = torch.cat([state_batch,actions_batch],dim=1)
         loss = -self.critic(q_inputs).mean()
-        self.optim_step(loss, self.actor_optim)    
+        self.optim_step(loss, self.actor_optim, self.actor)    
         return loss.data.cpu().numpy()
     
     def get_states_actions(self,batch):
