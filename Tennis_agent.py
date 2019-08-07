@@ -34,8 +34,8 @@ class SelfPlay_Agent(nn.Module):
         self.critic_target = CriticNet(state_size, action_size, num_agents).to(device)
             
         # Copy AC networks to target networks
-        self.copy2target(self.actor,self.actor_target)
-        self.copy2target(self.critic,self.critic_target)
+        self.copy2target(self.actor, self.actor_target)
+        self.copy2target(self.critic, self.critic_target)
         
         for param in self.actor_target.parameters():
             param.requires_grad = False
@@ -61,10 +61,10 @@ class SelfPlay_Agent(nn.Module):
         qtarget_inputs = self.get_qtarget_next(minibatch)
         gamma_Qnext = self.discount*self.critic_target(qtarget_inputs)
         q_vals = self.critic(q_inputs).view(-1)
-        rewards = torch.tensor([minibatch[i][2][agent_i] for i in range(len(minibatch))], dtype=torch.float, device=device)
-        dones = [torch.tensor(np.asarray(minibatch[i][-1])[np.newaxis],dtype=torch.float, device=device) for i in range(len(minibatch))]
-        dones = torch.cat(dones,dim=0)
-        y = rewards + gamma_Qnext.view(-1)*(1-dones[:,agent_i])
+        rewards = torch.tensor([minibatch[i][2][j] for i,j in enumerate(agent_i)], dtype=torch.float, device=device)
+        dones = [torch.tensor(np.asarray(minibatch[i][-1][j])[np.newaxis],dtype=torch.float, device=device) for i,j in enumerate(agent_i)]
+        dones = torch.cat(dones,dim=0)   
+        y = rewards + gamma_Qnext.view(-1)*(1-dones)
         loss = self.critic_loss(q_vals,y)
         self.optim_step(loss, self.critic_optim, self.critic)
         return loss.data.cpu().numpy()
@@ -86,9 +86,10 @@ class SelfPlay_Agent(nn.Module):
         return target_inputs
     
     ############### Actor updater ########################
-    def update_actor(self,minibatch,agent_i):
+    def update_actor(self,minibatch, agent_i):
         state_batch, actions_batch = self.get_states_actions(minibatch)
-        actions_batch[:,agent_i] = self.actor(state_batch[:,agent_i])
+        #get actions of minibatch for claculating policy gradient
+        actions_batch[torch.arange(len(agent_i)), agent_i] = self.actor(state_batch[torch.arange(len(agent_i)),agent_i])
         state_batch = state_batch.view(len(minibatch),-1)
         actions_batch = actions_batch.view(len(minibatch),-1)
         q_inputs = torch.cat([state_batch,actions_batch],dim=1)
