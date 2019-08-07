@@ -32,15 +32,15 @@ class SelfPlay_Agent(nn.Module):
         
         self.critic = CriticNet(state_size, action_size, num_agents).to(device)
         self.critic_target = CriticNet(state_size, action_size, num_agents).to(device)
-        
-        for param in self.actor_target.parameters():
-            param.requires_grad = False
-        for param in self.actor_target.parameters():
-            param.requires_grad = False
             
         # Copy AC networks to target networks
         self.copy2target(self.actor,self.actor_target)
         self.copy2target(self.critic,self.critic_target)
+        
+        for param in self.actor_target.parameters():
+            param.requires_grad = False
+        for param in self.critic_target.parameters():
+            param.requires_grad = False
         
         # Initialize Optimizers
         self.actor_optim = Adam(self.actor.parameters(), lr=self.lr_act)
