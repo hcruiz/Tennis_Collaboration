@@ -8,11 +8,15 @@ import numpy as np
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print("using device: ",device)
-GRADIENT_CLIP = 10
+GRADIENT_CLIP = None #10
+if GRADIENT_CLIP:
+    print('Gradient clipping at ',GRADIENT_CLIP)
+else:
+    print('NO grad. clipping used.')
 
 class SelfPlay_Agent(nn.Module):
     
-    def __init__(self, state_size, action_size, num_agents, discount=0.99, tau=0.01, lr_act=2.e-4, lr_crit=2.e-4):
+    def __init__(self, state_size, action_size, num_agents, discount=0.99, tau=0.01, lr_act=5.e-4, lr_crit=5.e-4):
         
         super(SelfPlay_Agent, self).__init__()
         
@@ -47,7 +51,8 @@ class SelfPlay_Agent(nn.Module):
     def optim_step(self,loss,optim,network):
         optim.zero_grad()
         loss.backward()
-        nn.utils.clip_grad_norm_(network.parameters(), GRADIENT_CLIP)
+        if GRADIENT_CLIP: 
+            nn.utils.clip_grad_norm_(network.parameters(), GRADIENT_CLIP)
         optim.step()
         
     ############### Critic updater ########################
