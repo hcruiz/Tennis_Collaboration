@@ -16,7 +16,7 @@ class OUprocess:
         self.reset()
 
     def reset(self):
-        self.state = np.zeros(self.action_dimension)
+        self.state = self.sigma * np.random.randn(self.action_dimension)
 
     def noise(self):
         dx = - self.theta * self.state + self.sigma * np.random.randn(len(self.state))
