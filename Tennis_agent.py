@@ -57,26 +57,33 @@ class SelfPlay_Agent(nn.Module):
         
     ############### Critic updater ########################
     def update_critic(self, minibatch, agent_i):
-        q_inputs = self.get_qinputs(minibatch)
-        qtarget_inputs = self.get_qtarget_next(minibatch)
+        q_inputs = self.get_qinputs(minibatch, agent_i)
+        qtarget_inputs = self.get_qtarget_next(minibatch, agent_i)
         gamma_Qnext = self.discount*self.critic_target(qtarget_inputs)
         q_vals = self.critic(q_inputs).view(-1)
-        rewards = torch.tensor([minibatch[i][2][j] for i,j in enumerate(agent_i)], dtype=torch.float, device=device)
-        dones = [torch.tensor(np.asarray(minibatch[i][-1][j])[np.newaxis],dtype=torch.float, device=device) for i,j in enumerate(agent_i)]
+#         rewards = torch.tensor([minibatch[i][2][j] for i,j in enumerate(agent_i)], dtype=torch.float, device=device)
+#         dones = [torch.tensor(np.asarray(minibatch[i][-1][j])[np.newaxis],dtype=torch.float, device=device) for i,j in enumerate(agent_i)]
+        rewards = torch.tensor([minibatch[i][2] for i in range(len(minibatch))], dtype=torch.float, device=device)
+        dones = [torch.tensor(np.asarray(minibatch[i][-1])[np.newaxis],dtype=torch.float, device=device) for i in range(len(minibatch))]
         dones = torch.cat(dones,dim=0)   
-        y = rewards + gamma_Qnext.view(-1)*(1-dones)
-        loss = self.critic_loss(q_vals,y)
+#         print(rewards.shape,dones.shape,gamma_Qnext.shape)
+        y = rewards + gamma_Qnext*(1-dones)
+#         print(y.shape)
+        loss = (self.critic_loss(q_vals,y[:,0]) + self.critic_loss(q_vals,y[:,1]))/2.0
         self.optim_step(loss, self.critic_optim, self.critic)
         return loss.data.cpu().numpy()
     
-    def get_qinputs(self,batch):
+    def get_qinputs(self,batch, agent_i):
         state_batch = [torch.tensor(batch[i][0].flatten()[np.newaxis,:],dtype=torch.float,device=device) for i in range(len(batch))]
-        state_batch = torch.cat(state_batch,dim=0)
         actions_batch = [torch.tensor(batch[i][1].flatten()[np.newaxis,:],dtype=torch.float,device=device) for i in range(len(batch))]
+#         state_batch = [torch.tensor(batch[i][0][np.newaxis],dtype=torch.float,device=device) for i in range(len(batch))]
+#         actions_batch = [torch.tensor(batch[i][1][np.newaxis],dtype=torch.float,device=device) for i in range(len(batch))]
+        #========================================#
+        state_batch = torch.cat(state_batch,dim=0)
         actions_batch = torch.cat(actions_batch,dim=0)
         return torch.cat([state_batch,actions_batch],dim=1)
     
-    def get_qtarget_next(self,batch):
+    def get_qtarget_next(self,batch, agent_i):
         state_batch = [torch.tensor(batch[i][-2][np.newaxis],dtype=torch.float,device=device) for i in range(len(batch))]
         state_batch = torch.cat(state_batch,dim=0)
         actions_batch = [self.actor_target(state_batch[:,0]),self.actor_target(state_batch[:,1])]
@@ -93,7 +100,7 @@ class SelfPlay_Agent(nn.Module):
         state_batch = state_batch.view(len(minibatch),-1)
         actions_batch = actions_batch.view(len(minibatch),-1)
         q_inputs = torch.cat([state_batch,actions_batch],dim=1)
-        loss = -self.critic(q_inputs).mean()
+        loss = -self.critic(q_inputs).mean()    
         self.optim_step(loss, self.actor_optim, self.actor)    
         return loss.data.cpu().numpy()
     
