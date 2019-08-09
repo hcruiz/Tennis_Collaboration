@@ -16,7 +16,7 @@ else:
 
 class SelfPlay_Agent(nn.Module):
     
-    def __init__(self, state_size, action_size, num_agents, discount=0.99, tau=0.01, lr_act=5.e-4, lr_crit=5.e-4):
+    def __init__(self, state_size, action_size, num_agents, discount=0.99, tau=0.01, lr_act=5.e-4, lr_crit=5.e-4, seed=232324):
         
         super(SelfPlay_Agent, self).__init__()
         
@@ -27,11 +27,11 @@ class SelfPlay_Agent(nn.Module):
         self.lr_crit = lr_crit
         
         # Define Actor and Critic Networks
-        self.actor = ActorNet(state_size, action_size).to(device)
-        self.actor_target = ActorNet(state_size, action_size).to(device)
+        self.actor = ActorNet(state_size, action_size,seed=seed).to(device)
+        self.actor_target = ActorNet(state_size, action_size,seed=seed).to(device)
         
-        self.critic = CriticNet(state_size, action_size, num_agents).to(device)
-        self.critic_target = CriticNet(state_size, action_size, num_agents).to(device)
+        self.critic = CriticNet(state_size, action_size, num_agents,seed=seed).to(device)
+        self.critic_target = CriticNet(state_size, action_size, num_agents,seed=seed).to(device)
             
         # Copy AC networks to target networks
         self.copy2target(self.actor, self.actor_target)

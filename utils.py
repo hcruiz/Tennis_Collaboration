@@ -9,25 +9,31 @@ class OUprocess:
     '''Addapted from https://github.com/songrotek/DDPG/blob/master/ou_noise.py
     Here, the OU process is centered at the origin so no mu parameter required
     '''
-    def __init__(self, action_dimension, theta=0.15, sigma=1.0):
+    def __init__(self,num_agents, action_dimension, theta=0.15, sigma=1.0, seed = 2158257210):
+        self.num_agents = num_agents
         self.action_dimension = action_dimension
         self.theta = theta
         self.sigma = sigma
+        
+        np.random.seed(seed)
+        print('numpy seed in ou-process set to :',seed)
         self.reset()
 
     def reset(self):
         self.state = np.zeros(self.action_dimension)
 
     def noise(self):
-        dx = - self.theta * self.state + self.sigma * np.random.randn(len(self.state))
+        dx = - self.theta * self.state + self.sigma * np.random.randn(self.num_agents,self.action_dimension)
         self.state = self.state + dx
         return self.state     
     
     
 class Reply_buffer:
-    def __init__(self, buffer_size):
+    def __init__(self, buffer_size, seed=33231):
         self.buffer = deque(maxlen=buffer_size)
         self.buffer_size = buffer_size
+        random.seed(seed)
+        print('Random seed in buffer is: ', seed)
         
     def store(self, samples):
 #         for sars in list(zip(*samples)):
