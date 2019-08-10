@@ -34,10 +34,10 @@ Description | max. # episodes | learning rate actor | learning rate critic | rew
 
 , see fig. "Mean Rewards". 
 
-![Mean Rewards]( "Mean Rewards")
+![Mean Rewards](https://github.com/hcruiz/Tennis_Collaboration/blob/master/Scores.png "Mean Rewards")
 
 The instability can be appreciated when looking at the actor and critic losses, see fig. "AC losses". Here, the 'Episodes' denote the gradient descent epochs made over the entire training. On the left, we see that the policy/actor loss decreases rapidly at the end and seems to be exploding. On the right, we see the same effect in the critic loss, i.e. it explodes towards the end. This makes the agent lose stability, as it can be appreciated from the reward profile, see fig. "Mean Rewards".
 
-![AC losses]( "AC losses")
+![AC losses](https://github.com/hcruiz/Tennis_Collaboration/blob/master/AC_loss.png "AC losses")
 
 ## Future Work
