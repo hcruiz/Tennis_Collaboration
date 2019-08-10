@@ -4,25 +4,29 @@ This report describes the implementation details of my approach to solve the Ten
 
 ## Learning Algorithm
 
-This environment is solved using an Actor-Critic method with . More specific, our RL-agent is composed of two neural networks, the actor/policy network and the critic network. Both are trained with the same data gathered during an episode but optimizing two different functions ![equation](https://latex.codecogs.com/gif.latex?L%5E%7B%5Cepsilon%7D_%7BPPO%7D) and a simple quadratic cost function (MSE) respectively,
+Before describing the algorithm, one should notice that nature of the environment and task, i.e. a cooperative task with a symmetric environment, allows self-learning and the reduction of this multi-agent scenario to a single agent scenario that could be solved via DDPG. However, I took another approach described below.
 
-![equation](https://latex.codecogs.com/gif.latex?L%5E%7B%5Cepsilon%7D_%7BPPO%7D%20%3D%20%5Cfrac%7B1%7D%7BM%7D%5Csum_%7Bt%2Ci%7Dmin%5Cleft%20%5B%20A%5Ei_t%5Cfrac%7B%5Cpi_%7Bnew%7D%28a%5Ei_t%7Cs%5Ei_t%29%7D%7B%5Cpi_%7Bold%7D%28a%5Ei_t%7Cs%5Ei_t%29%7D%2Cclip_%7B%5Cepsilon%7D%5Cleft%28%20A%5Ei_t%5Cfrac%7B%5Cpi_%7Bnew%7D%28a%5Ei_t%7Cs%5Ei_t%29%7D%7B%5Cpi_%7Bold%7D%28a%5Ei_t%7Cs%5Ei_t%29%7D%20%5Cright%20%29%20%5Cright%20%5D)
+Here, the environment is solved using an adaptation of the MADDPG for self-playing agents. More specific, there is only one agent that plays with itself, but the Q-function treats the state-action pairs of the agent as if there were two distinct actors, one for each field in the tennis court. 
 
-![equation](https://latex.codecogs.com/gif.latex?L_%7BMSE%7D%20%3D%20%5Cfrac%7B1%7D%7BMT%7D%5Csum_%7Bt%2Ci%7D%5Cleft%20%5C%7C%20V%28s_t%5Ei%29%20-%20%5Chat%7BR%7D_t%5Ei%20%5Cright%20%5C%7C%5E%7B2%7D)
+The idea behind using this MADDPG Q-function (instead of the single state-action pair as in DDPG), was to 'connect' the state-action pairs of the agent on each side of the tennis court to account for the fact that even if the ball is not yet on your side, you can position yourself to receive it, if your actions acknowledge the opposite side of the court. Hence, our RL-agent is composed of two neural networks, a single actor/policy network for both sides and a 'critic' network (or Q-function), which takes both state-action pairs to evaluate their Q-value. 
 
-where  ![equation](https://latex.codecogs.com/gif.latex?M%2C%20%5Cpi%28a%5Ei_t%7Cs%5Ei_t%29%2C%20V%28s_t%5Ei%29%20%2C%20%5Chat%7BR%7D_t%5Ei)  are the number of samples (=timepoints x agents), the policy, value function, and the discounted rewards respectively.
+Both networks are trained with the same data gathered during an episode and saved in a replay buffer, but they optimise two different functions. The negative Q-function (approximated by the critic network) is the cost of the actor, while the critic network optimises a simple quadratic error (MSE) between the targets and the state-action value. Training is done every certain amount of time steps and, at each update time, several gradient descent steps are made. For more details on the network architecture and the hyper-parameters, see below.
 
-The actor network is a deterministic policy, however, the action gets some noise from an Ornstein-Uhlenbeck process.
+In addition, there are target networks for both the actor and the critic used to construct the target values for the critic loss function. These target networks are updated every now and then. It is possible to updated in a hard way (copying the current network completely into the target network) or in a soft way (by an exponential rolling average).
+
+Although the actor network is a deterministic policy, the action gets some noise from an Ornstein-Uhlenbeck process to enhance exploration. 
 
 For more details on the MADDPG algorithm, the reader is referred to this [paper](https://arxiv.org/pdf/1706.02275.pdf).
 
 ### Neural Network Architectures
-Both the actor and the critic neural networks have two layers with 256 nodes each. Both have ReLUs as activation functions and hence, the only difference is in their output. While the critic outputs a single linear node giving the state-value function estimation, the actor's output is 4-dimensional representing the torch in both joints. Furthermore, this output is passed through a hyperbolic tangent before it is fed as the mean to a Normal distribution, from which the final action is sampled. 
+Both the actor and the critic neural networks have two hidden layers, the actor with 128 and 64 nodes and the critic with 256 and 64 nodes. However, the critic has an additional batch norm layer **before** the first layer to account for the differences in scale between the state and actions. Both networks have ReLU activation functions. 
+
+While the critic outputs a single linear node giving the state-value function estimation, the actor outputs a 2-dimensional vector with elementwise application of a hyperbolic tangent. This output represents moving forward/backward and jumping.
 
 ### Parameters
 
 Parameter | nr_episodes | lra | lrc | discount | noise_lvl |update_steps | GD_steps | batch_size | tau | tau update_steps |
----|---|---|---|---|---|---|---|---|---|---|---|---|
+|---|---|---|---|---|---|---|---|---|---|---|
 Value | 1500 | 1.e-3 | 1.e-3 | 0.999 | 0.2 |5 | 4 | 256 | 1.0 | 2x update_steps | 
 Description | max. # episodes | learning rate actor | learning rate critic | reward discount factor | ou noise | time steps between training | nr. grad. desc. epochs | mini-batch | strength of target update (1 == hard) | time steps between target update |
 
