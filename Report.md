@@ -30,7 +30,7 @@ Description | max. # episodes | learning rate actor | learning rate critic | rew
 
 ## Results
 
-The environment was solved in 1127 episodes and continued above +0.5 throughout the rest of the trial except for a small number of episodes. Hence, the agent remained stable, albeit learning being slow, see fig. "Mean Rewards". Nevertheless, the maximum score achieved was +0.62. From other values reported, there is room for improvement by avoiding the plateau seen towards the end of the run.
+The environment was solved in 1127 episodes and continued above +0.5 throughout the rest of the trial except for a small number of episodes. Hence, the agent remained stable, albeit learning being slow, see fig. "Mean Rewards"  (red graph: running average; blue: max. score). Nevertheless, the maximum score achieved was +0.62. From other values reported, there is room for improvement by avoiding the plateau seen towards the end of the run.
 
 ![Mean Rewards](https://github.com/hcruiz/Tennis_Collaboration/blob/master/Scores.png "Mean Rewards")
 
