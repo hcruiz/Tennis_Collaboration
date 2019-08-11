@@ -29,6 +29,10 @@ class OUprocess:
     
     
 class Reply_buffer:
+    '''The replay buffer saves the experiences of both agents in a single 'combined' experience tuple with the method store(samples) 
+    and retrieves a mini-batch of batch_size using the method get_batch(batch_size).
+    It is initialized with buffer_size.
+    '''
     def __init__(self, buffer_size, seed=33231):
         self.buffer = deque(maxlen=buffer_size)
         self.buffer_size = buffer_size
