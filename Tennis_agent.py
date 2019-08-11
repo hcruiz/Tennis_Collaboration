@@ -1,4 +1,5 @@
-'''
+'''Self-playing Tennis agent with a critic Q-function that takes both states and action pairs of the same agent on both sides of the 
+tennis court.
 '''
 import torch
 import torch.nn as nn
@@ -8,7 +9,7 @@ import numpy as np
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print("using device: ",device)
-GRADIENT_CLIP = None #10
+GRADIENT_CLIP = None
 if GRADIENT_CLIP:
     print('Gradient clipping at ',GRADIENT_CLIP)
 else:
@@ -49,6 +50,9 @@ class SelfPlay_Agent(nn.Module):
         self.critic_loss = nn.MSELoss()
 
     def optim_step(self,loss,optim,network):
+        '''update step for a general loss, optimizer function and network. 
+        Gradient clipping is defined outside the class.
+        '''
         optim.zero_grad()
         loss.backward()
         if GRADIENT_CLIP: 
@@ -57,28 +61,25 @@ class SelfPlay_Agent(nn.Module):
         
     ############### Critic updater ########################
     def update_critic(self, minibatch, agent_i):
+        # Get inputs for the critic network (s1,s2,a1,a2)
         q_inputs = self.get_qinputs(minibatch, agent_i)
         qtarget_inputs = self.get_qtarget_next(minibatch, agent_i)
+        # Get target values reward + gamma*Qval_next
         gamma_Qnext = self.discount*self.critic_target(qtarget_inputs)
         q_vals = self.critic(q_inputs).view(-1)
-#         rewards = torch.tensor([minibatch[i][2][j] for i,j in enumerate(agent_i)], dtype=torch.float, device=device)
-#         dones = [torch.tensor(np.asarray(minibatch[i][-1][j])[np.newaxis],dtype=torch.float, device=device) for i,j in enumerate(agent_i)]
         rewards = torch.tensor([minibatch[i][2] for i in range(len(minibatch))], dtype=torch.float, device=device)
         dones = [torch.tensor(np.asarray(minibatch[i][-1])[np.newaxis],dtype=torch.float, device=device) for i in range(len(minibatch))]
         dones = torch.cat(dones,dim=0)   
-#         print(rewards.shape,dones.shape,gamma_Qnext.shape)
         y = rewards + gamma_Qnext*(1-dones)
-#         print(y.shape)
+        # Loss function taking both rewards per experience into account
         loss = (self.critic_loss(q_vals,y[:,0]) + self.critic_loss(q_vals,y[:,1]))/2.0
+        # Update network
         self.optim_step(loss, self.critic_optim, self.critic)
         return loss.data.cpu().numpy()
     
     def get_qinputs(self,batch, agent_i):
         state_batch = [torch.tensor(batch[i][0].flatten()[np.newaxis,:],dtype=torch.float,device=device) for i in range(len(batch))]
         actions_batch = [torch.tensor(batch[i][1].flatten()[np.newaxis,:],dtype=torch.float,device=device) for i in range(len(batch))]
-#         state_batch = [torch.tensor(batch[i][0][np.newaxis],dtype=torch.float,device=device) for i in range(len(batch))]
-#         actions_batch = [torch.tensor(batch[i][1][np.newaxis],dtype=torch.float,device=device) for i in range(len(batch))]
-        #========================================#
         state_batch = torch.cat(state_batch,dim=0)
         actions_batch = torch.cat(actions_batch,dim=0)
         return torch.cat([state_batch,actions_batch],dim=1)
@@ -95,11 +96,12 @@ class SelfPlay_Agent(nn.Module):
     ############### Actor updater ########################
     def update_actor(self,minibatch, agent_i):
         state_batch, actions_batch = self.get_states_actions(minibatch)
-        #get actions of minibatch for claculating policy gradient
+        #get actions of minibatch for claculating policy gradient; the sample over agents is done with agent_i drawn random.randint
         actions_batch[torch.arange(len(agent_i)), agent_i] = self.actor(state_batch[torch.arange(len(agent_i)),agent_i])
         state_batch = state_batch.view(len(minibatch),-1)
         actions_batch = actions_batch.view(len(minibatch),-1)
         q_inputs = torch.cat([state_batch,actions_batch],dim=1)
+        # Get loss value and update network
         loss = -self.critic(q_inputs).mean()    
         self.optim_step(loss, self.actor_optim, self.actor)    
         return loss.data.cpu().numpy()
@@ -110,7 +112,9 @@ class SelfPlay_Agent(nn.Module):
         actions_batch = [torch.tensor(batch[i][1][np.newaxis],dtype=torch.float,device=device) for i in range(len(batch))]
         actions_batch = torch.cat(actions_batch,dim=0)
         return state_batch, actions_batch
+    
     #######################################################
+    
     def target_update(self):
         # Soft update ACTOR
         target_actor_params = self.actor_target.parameters()
