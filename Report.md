@@ -39,3 +39,17 @@ The plateau in the score profile can be understood by looking at the losses of b
 ![AC losses](https://github.com/hcruiz/Tennis_Collaboration/blob/master/AC_loss.png "AC losses")
 
 ## Future Work
+
+There were two distinct elements in my implementation, self-play and a combined Q-function (in the spirit of MADDPG). The idea behind self-playing was to use samples more efficiently and thus make training easier and the idea behind the Q-function was to allow information about the events on the opposite side of the court improve the performance of the agent. In hindsight, this approach might have been too naive. Compared to other implementations with two agents, self-playing actually requires more episodes. Furthermore, the form of the Q-function does not make the problem easier to solve, on the contrary, it seems more unstable.
+
+Although I tried many different 'tricks' to have more reliable learning and stabilize the agent (gradient clipping, batch norm, soft update, lower learning rate, different number of update intervals and gradient descent steps, etc.), there was little effect on learning from any of them and most of the time I would have fast learning but suboptimal policies that achieved scores of 0.3-0.45. I would like to understand why. 
+
+Possible explanations are a) the general instability of the RL approach and its sensitivity to initial conditions and/or, b) the divergence of the loss. Hence, I would like to do a systematic analysis of the loss and understand why it diverges and which of these 'tricks' could help at least avoid the collapse of the agent, even if learning still takes long and is unreliable. 
+
+Hence, more analysis and a systematic comparison to other approaches are required. Specifically, 
+* Stabilization of the loss with a systematic hyper-parameter search
+* Comparison to:
+   * a standard DDPG approach with a single agent 
+   * a truly multi-agent setting
+* Analyze how efficient, reliable and stable these approaches are compared to the approach here. This comparison aims to understand which elements of my implementation are causing slow learning and how they affect performance.
+* Can we use only a single 8-dimensional observation instead of 3 stacked?
