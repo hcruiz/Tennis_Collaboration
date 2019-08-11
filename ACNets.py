@@ -12,8 +12,11 @@ import numpy as np
 #         layer.weight.data.uniform_(*hidden_init(layer))
 
 class ActorNet(nn.Module):
-    
-    def __init__(self, state_size, action_size, hidden_size1=128, hidden_size2=64, hidden_size3=16, seed = 128):
+    '''Actor network with input size of state_size and two hidden layers hidden_size1, hidden_size2 
+    with relu activation. The network has an output of dimension action_size. The output vector is passed through a tanh function elementwise 
+    before it is returned.
+    '''
+    def __init__(self, state_size, action_size, hidden_size1=128, hidden_size2=64, seed = 128):
         
         super(ActorNet, self).__init__()
         
@@ -27,9 +30,6 @@ class ActorNet(nn.Module):
 #         reset_parameters(self.fc_in)
         self.fc1 = nn.Linear(hidden_size1,hidden_size2)
 #         reset_parameters(self.fc1)
-#         self.fc2 = nn.Linear(hidden_size2,hidden_size3)
-#         self.fc_out = nn.Linear(hidden_size3,action_size)
-#         self.bn = nn.BatchNorm1d(num_features=action_size)
         self.fc_out = nn.Linear(hidden_size2,action_size)
 #         self.fc_out.weight.data.uniform_(-3e-3, 3e-3)
         
@@ -39,35 +39,32 @@ class ActorNet(nn.Module):
     
     def forward(self,x):
         
-        #x = self.bn(x) #is batch norm needed?
         x = self.activ(self.fc_in(x))
         x = self.activ(self.fc1(x))
-#         x = self.activ(self.fc2(x))
         x = self.fc_out(x)
-#         x = self.bn(x)
         return self.tanh(x) # all actions between -1 and 1
     
 class CriticNet(nn.Module):
-    
-    def __init__(self, state_size, action_size, num_agents, hidden_size=256, seed = 128):
+    '''Critic network with input size of (state_size + action_size) * num_agents and two hidden layers hidden_size1, hidden_size2 
+    with relu activation. There is a batch norm step before the input layer.
+    '''
+    def __init__(self, state_size, action_size, num_agents, hidden_size1=256, hidden_size2=64, seed = 128):
         super(CriticNet, self).__init__()
         
         self.seed = torch.manual_seed(seed)
         print('torch seed in critic set to: ', seed)
         
         self.in_dim = (state_size + action_size) * num_agents
-        self.hidden_size = hidden_size
+        self.hidden_size1 = hidden_size1
         self.activ = nn.functional.relu
         
         self.bn0 = nn.BatchNorm1d(num_features=self.in_dim)
-        self.fc_in = nn.Linear(self.in_dim, hidden_size)
+        self.fc_in = nn.Linear(self.in_dim, hidden_size1)
 #         reset_parameters(self.fc_in)
-#         self.bn1 = nn.BatchNorm1d(num_features=hidden_size)
-        self.fc1 = nn.Linear(hidden_size,int(hidden_size/4))
+#         self.bn1 = nn.BatchNorm1d(num_features=hidden_size1)
+        self.fc1 = nn.Linear(hidden_size1,hidden_size2)
 #         reset_parameters(self.fc1)
-#         self.bn2 = nn.BatchNorm1d(num_features=int(hidden_size/4))
-#         self.fc2 = nn.Linear(int(hidden_size/2),int(hidden_size/4))
-        self.fc_out = nn.Linear(int(hidden_size/4),1)
+        self.fc_out = nn.Linear(hidden_size2,1)
 #         self.fc_out.weight.data.uniform_(-3e-3, 3e-3)
         
     def forward(self,x):
@@ -76,7 +73,4 @@ class CriticNet(nn.Module):
         x = self.activ(self.fc_in(x))
 #         x = self.bn1(x)
         x = self.activ(self.fc1(x))
-#         x = self.bn2(x)
-#         x = self.activ(self.fc2(x))
-        
         return self.fc_out(x)
